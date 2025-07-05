@@ -15,6 +15,12 @@ app.use(express.json());
 // Serve frontend build (React)
 app.use(express.static(path.join(__dirname, 'build')));
 
+// Validate Mongo URI early
+if (!process.env.MONGO_URI) {
+  console.error('❌ MONGO_URI is not set in the environment variables.');
+  process.exit(1);
+}
+
 // MongoDB Configuration
 async function connectDB() {
   const client = new MongoClient(process.env.MONGO_URI, {
@@ -32,7 +38,7 @@ async function connectDB() {
     console.log('✅ MongoDB connected');
     return client;
   } catch (error) {
-    console.error('❌ MongoDB connection failed:', error);
+    console.error('❌ MongoDB connection failed:', error.message);
     process.exit(1);
   }
 }
@@ -44,7 +50,6 @@ async function startServer() {
   // Matching Endpoint
   app.post('/api/find-neighborhoods', async (req, res) => {
     try {
-      console.log('Received preferences:', req.body);
       const { safety = 0.5, amenities = 0.5, affordability = 0.5 } = req.body;
       const collection = db.collection('neighbourhoods');
 
@@ -62,8 +67,6 @@ async function startServer() {
         priceIndex: { $exists: true, $type: 'number', $gte: 0, $lte: 10 }
       }).toArray();
 
-      console.log(`Found ${neighborhoods.length} valid neighborhoods`);
-
       if (!neighborhoods.length) {
         return res.status(404).json({
           success: false,
@@ -75,8 +78,6 @@ async function startServer() {
         { safety, amenities, cost: affordability },
         neighborhoods
       ).slice(0, 5);
-
-      console.log('Top matches:', matches.map(m => ({ name: m.name, score: m.matchScore })));
 
       const results = await Promise.all(
         matches.map(async match => {
