@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const uri = process.env.MONGO_URI;
 const express = require('express');
 const cors = require('cors');
 const { calculateScores } = require('./algorithm');
